@@ -8,6 +8,8 @@ use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\db\Query;
+
 
 /**
  * CityController implements the CRUD actions for City model.
@@ -108,49 +110,33 @@ class UserController extends Controller
 		}
             }
          
+                
+               $query=new Query;
+               $query->offset($offset)
+	             ->limit($limit)
+	             ->from('user')
+	             ->andFilterWhere(['like', 'id', $filter['id']])
+	             ->andFilterWhere(['like', 'name', $filter['name']])
+	             ->andFilterWhere(['like', 'age', $filter['age']])
+	             ->orderBy($sort)
+	             ->select("id,name,age,createdAt,updatedAt");
+	             
+	       if($datefilter['from'])
+	       {
+	        $query->andWhere("createdAt >= '".$datefilter['from']."' ");
+	       }
+	       if($datefilter['to'])
+	       {
+	        $query->andWhere("createdAt <= '".$datefilter['to']."'");
+	       }
+	       $command = $query->createCommand();
+               $models = $command->queryAll();
                
-               
-		$models=User::find()
-			    ->offset($offset)
-			    ->limit($limit)
-			    ->select("id,name,age,createdAt,updatedAt")
-			   // ->andFilterWhere(['$gte', 'createdAt', $datefilter['from']])
-			   // ->andFilterWhere(['<=', 'createdAt', $datefilter['to']])
-			   // ->andFilterWhere(['<=', ['createdAt'=>$datefilter['to'] ]])
-			    //->andFilterWhere(['createdAt'=>$datefilter['to']]) 
-			   // ->andFilterWhere(['createdAt'=>'2014-09-04 19:44:40'])
-			    ->andFilterWhere(['like', 'createdAt',(string)$datefilter['from']])
-			    ->andFilterWhere(['like', 'createdAt',(string)$datefilter['to']])
-			    //->andFilterWhere(['like', 'createdAt',$datefilter['to']])
-			   //  ->andFilterWhere(['like', 'createdAt','2014-09-04'])
-			    //->andFilterWhere(['like', 'createdAt','2014-09-04 19:44:40'])
-			    ->andFilterWhere(['like', 'id', $filter['id']])
-			    ->andFilterWhere(['like', 'name', $filter['name']])
-			    ->andFilterWhere(['like', 'age', $filter['age']])
-			  
-			   
-			    ->orderBy($sort)
-			    ->all();
-		
-		
-		$totalItems=User::find()
-		                ->andFilterWhere(['like', 'createdAt',(string)$datefilter['from']])
-		                ->andFilterWhere(['like', 'id', $filter['id']])
-			        ->andFilterWhere(['like', 'name', $filter['name']])
-			        ->andFilterWhere(['like', 'age', $filter['age']])
-		                ->count();
-                       
-                       
-          
-          $data=array();
-          foreach($models as $m)
-          { 
-            $data[]=array_filter($m->attributes);
-          }     
+               $totalItems=$query->count();
           
           $this->setHeader(200);
          
-          echo json_encode(array('status'=>1,'data'=>$data,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
+          echo json_encode(array('status'=>1,'data'=>$models,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
        
     }
       

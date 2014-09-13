@@ -72,81 +72,80 @@ Note:This example is based on a table user(id(PK AI),name,age,createdAt,updatedA
 ###Action Source code:
 
 ```php
-public function actionIndex()
-{
-
-      $params=$_REQUEST;
-      $filter=array();
-    
-      $page=1;  /* default page number */
-      $limit=10; /* default limit */
-	
-	  
-      if(isset($params['page']))
-	$page=$params['page'];
-	  
-	  
-      if(isset($params['limit']))
-	  $limit=$params['limit'];
-	  
-	$offset=$limit*($page-1);
-	
-	
-	/* Filter elements */
-      if(isset($params['filter']))
-	{
-	$filter=(array)json_decode($params['filter']);
-	}
-	
-	/* Sort field */
-	$sort="";
-	if(isset($params['sort']))
-	{
-	  $sort=$params['sort'];
-	    if(isset($params['order']))
-	    {  
-		if($params['order']=="false")
-		$sort.=" desc";
-		else
-		$sort.=" asc";
-	    
-	    }
-	}
-    
-	  
-	  
-	    $models=User::find()
-			->offset($offset)
-			->limit($limit)
-			
-			->andFilterWhere(['like', 'id', $filter['id']])
-			->andFilterWhere(['like', 'name', $filter['name']])
-			->andFilterWhere(['like', 'age', $filter['age']])
-			
-			->orderBy($sort)
-			->all();
-	    
-	    
-	    $totalItems=User::find()
-			    
-			    ->andFilterWhere(['like', 'id', $filter['id']])
-			    ->andFilterWhere(['like', 'name', $filter['name']])
-			    ->andFilterWhere(['like', 'age', $filter['age']])
-			    ->count();
-		  
-		  
-      
-      $data=array();
-      foreach($models as $m)
-      { 
-	$data[]=array_filter($m->attributes);
-      }     
-      
-      $this->setHeader(200);
-    
-      echo json_encode(array('status'=>1,'data'=>$data,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
-  
-}
+ public function actionIndex()
+    {
+     
+          $params=$_REQUEST;
+          $filter=array();
+          $sort="";
+         
+          $page=1;
+          $limit=10;
+             
+           if(isset($params['page']))
+             $page=$params['page'];
+              
+               
+           if(isset($params['limit']))
+              $limit=$params['limit'];
+               
+            $offset=$limit*($page-1);
+             
+             
+            /* Filter elements */
+           if(isset($params['filter']))
+            {
+             $filter=(array)json_decode($params['filter']);
+            }
+            
+             if(isset($params['datefilter']))
+            {
+             $datefilter=(array)json_decode($params['datefilter']);
+            }
+            
+             
+            if(isset($params['sort']))
+            {
+              $sort=$params['sort'];
+		 if(isset($params['order']))
+		{  
+		    if($params['order']=="false")
+		     $sort.=" desc";
+		    else
+		     $sort.=" asc";
+		 
+		}
+            }
+         
+                
+               $query=new Query;
+               $query->offset($offset)
+	             ->limit($limit)
+	             ->from('user')
+	             ->andFilterWhere(['like', 'id', $filter['id']])
+	             ->andFilterWhere(['like', 'name', $filter['name']])
+	             ->andFilterWhere(['like', 'age', $filter['age']])
+	             ->orderBy($sort)
+	             ->select("id,name,age,createdAt,updatedAt");
+	             
+	       if($datefilter['from'])
+	       {
+	        $query->andWhere("createdAt >= '".$datefilter['from']."' ");
+	       }
+	       if($datefilter['to'])
+	       {
+	        $query->andWhere("createdAt <= '".$datefilter['to']."'");
+	       }
+	       $command = $query->createCommand();
+               $models = $command->queryAll();
+               
+               $totalItems=$query->count();
+          
+          $this->setHeader(200);
+         
+          echo json_encode(array('status'=>1,'data'=>$models,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
+       
+    }
 
 /* Functions to set header with status code. eg: 200 OK ,400 Bad Request etc..*/	    
 private function setHeader($status)
@@ -507,7 +506,7 @@ public function beforeAction($event)
 	    use yii\web\Controller;
 	    use yii\web\NotFoundHttpException;
 	    use yii\filters\VerbFilter;
-
+            use yii\db\Query;
 	    /**
 	    * UserController implements the CRUD actions for User model.
 	    */
@@ -562,7 +561,7 @@ public function beforeAction($event)
 		* Lists all User models.
 		* @return mixed
 		*/
-		public function actionIndex()
+		 public function actionIndex()
 		{
 		
 		      $params=$_REQUEST;
@@ -587,7 +586,11 @@ public function beforeAction($event)
 			{
 			$filter=(array)json_decode($params['filter']);
 			}
-		
+			
+			if(isset($params['datefilter']))
+			{
+			$datefilter=(array)json_decode($params['datefilter']);
+			}
 			
 			
 			if(isset($params['sort']))
@@ -603,38 +606,33 @@ public function beforeAction($event)
 			    }
 			}
 		    
-			  
-			  
-			    $models=User::find()
-					->offset($offset)
-					->limit($limit)
-					
-					->andFilterWhere(['like', 'id', $filter['id']])
-					->andFilterWhere(['like', 'name', $filter['name']])
-					->andFilterWhere(['like', 'age', $filter['age']])
-				      
-				      
-					->orderBy($sort)
-					->all();
 			    
-			    
-			    $totalItems=User::find()
-					    ->andFilterWhere(['like', 'id', $filter['id']])
-					    ->andFilterWhere(['like', 'name', $filter['name']])
-					    ->andFilterWhere(['like', 'age', $filter['age']])
-					    ->count();
-				  
-				  
-		      
-		      $data=array();
-		      foreach($models as $m)
-		      { 
-			$data[]=array_filter($m->attributes);
-		      }     
+			  $query=new Query;
+			  $query->offset($offset)
+				->limit($limit)
+				->from('user')
+				->andFilterWhere(['like', 'id', $filter['id']])
+				->andFilterWhere(['like', 'name', $filter['name']])
+				->andFilterWhere(['like', 'age', $filter['age']])
+				->orderBy($sort)
+				->select("id,name,age,createdAt,updatedAt");
+				
+			  if($datefilter['from'])
+			  {
+			    $query->andWhere("createdAt >= '".$datefilter['from']."' ");
+			  }
+			  if($datefilter['to'])
+			  {
+			    $query->andWhere("createdAt <= '".$datefilter['to']."'");
+			  }
+			  $command = $query->createCommand();
+			  $models = $command->queryAll();
+			  
+			  $totalItems=$query->count();
 		      
 		      $this->setHeader(200);
 		    
-		      echo json_encode(array('status'=>1,'data'=>$data,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
+		      echo json_encode(array('status'=>1,'data'=>$models,'totalItems'=>$totalItems),JSON_PRETTY_PRINT);
 		  
 		}
 		  
